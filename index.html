@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+   <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+      <meta name="description" content="">
+      <meta name="author" content="Mark Otto, Jacob Thornton, and Bootstrap contributors">
+      <meta name="generator" content="Jekyll v3.8.5">
+      <title>Welcome to our Transcriber!</title>
+      <!-- Bootstrap core CSS -->
+      <link href="css/bootstrap.min.css" rel="stylesheet" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+      <style>
+         .bd-placeholder-img {
+         font-size: 1.125rem;
+         text-anchor: middle;
+         -webkit-user-select: none;
+         -moz-user-select: none;
+         -ms-user-select: none;
+         user-select: none;
+         }
+         @media (min-width: 768px) {
+         .bd-placeholder-img-lg {
+         font-size: 3.5rem;
+         }
+         }
+      </style>
+      <link href="css/cover.css" rel="stylesheet">
+   </head>
+   <body class="text-center">
+      <div class="cover-container d-flex w-100 h-100 p-3 mx-auto flex-column">
+         <header class="masthead mb-auto">
+            <div class="inner">
+               <h3 class="masthead-brand">AWS AVENGERS</h3>
+               <nav class="nav nav-masthead justify-content-center">
+               </nav>
+            </div>
+         </header>
+         <main role="main" class="inner cover">
+            <link rel="shortcut icon" href="http://capstone-transcribe-upload.s3-website-us-east-1.amazonaws.com/output.html">
+            <img src="images/aws.png" style="max-width: 240px;" >
+            <h1 class="cover-heading">Welcome to Verbavision!</h1>
+
+            <p class="lead">
+               <script type="text/javascript" src="https://sdk.amazonaws.com/js/aws-sdk-2.1.24.min.js"></script>
+               <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+               <script type="text/javascript">
+                  //Bucket Configurations
+                  var inputBucket = "capstone-transcribe-upload";
+                  var outputBucket = "capstone-transcribe-output";
+                  var bucketRegion = "us-east-1";
+                  var IdentityPoolId = "us-east-1:abc0aa94-442e-4cf6-96b6-beb8565bd9c0";
+                  
+                   AWS.config.update({
+                                  region: bucketRegion,
+                                  credentials: new AWS.CognitoIdentityCredentials({
+                                      IdentityPoolId: IdentityPoolId
+                                  })
+                              });
+                  
+                  var inputS3 = new AWS.S3({
+                      apiVersion: '2006-03-01',
+                      params: {Bucket: inputBucket}
+              });
+                    var outputS3 = new AWS.S3({
+                            apiVersion: '2006-03-01',
+                            params: {Bucket: outputBucket}
+               });
+                  
+                  function s3upload() {
+                     var files = document.getElementById('fileUpload').files;
+                     if (files) 
+                     {
+                       var file = files[0];
+                       var fileName = file.name.concat("-").concat(Math.floor(Math.random() * 100000));
+                       var filePath = 'uploads/' + fileName;
+                       var fileUrl = 'https://' + bucketRegion + '.amazonaws.com/' + 'capstone-transcribe-upload' + '/' +  filePath;
+                       
+                       
+                       //Upload a temporary file
+                       var HTMLFile = '<html> <p>Please wait your transcription is loading</p><script type="text/javascript">setTimeout(function() {window.location.reload();}, 5000);<\/script></html>'
+                       outputS3.upload({
+                          Key: 'transcriptions/' + fileName + '.html',
+                          Body: HTMLFile,
+                          ContentType: 'text/html',
+                          ACL: 'public-read'
+                          }, function(err, data) {
+                          if(err) {
+                          console.log(err);
+                          }
+                        });
+                       
+
+                       //Upload the requested file to start transcription process.
+                       inputS3.upload({
+                          Key: filePath,
+                          Body: file,
+                          }, function(err, data) {
+                          if(err) {
+                          console.log(err);
+                          }
+                          alert('Successfully Uploaded!');
+                          window.location.href = 'http://capstone-transcribe-output.s3-website-us-east-1.amazonaws.com/transcriptions/'.concat(fileName).concat(".html");
+                          }).on('httpUploadProgress', function (progress) {
+                          var uploaded = parseInt((progress.loaded * 100) / progress.total);
+                          $("progress").attr('value', uploaded);
+                        });
+
+                     }
+                  };
+               </script>
+            <div>        
+               <input type="file" id="fileUpload">    
+            </div>
+            <div> 
+               <button onclick="s3upload()" id="submitButton">Submit</button>    
+            </div>
+            </form>
+            </p>
+         </main>
+      </div>
+   </body>
+</html>
